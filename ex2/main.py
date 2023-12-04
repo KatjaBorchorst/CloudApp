@@ -46,11 +46,12 @@ class MyDCRApp(App):
         events_xml_clean = events_xml_no_quotes.replace('\\\"', "\"")
         events_json = xmltodict.parse(events_xml_clean)
         
+        self.layout_box = BoxLayout(orientation='vertical')
+        
         for e in events_json['events']['event']:
             self.layout_box.add_widget(Label(text=e['@label']))
             print(e['@label'])
 
-        self.layout_box = BoxLayout(orientation='vertical')
         self.b_outer.add_widget(self.layout_box)
     
 
