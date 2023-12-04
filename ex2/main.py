@@ -11,6 +11,7 @@ class MyDCRApp(App):
         App.__init__(self)
         self.password = TextInput(hint_text="Enter password", password=True)
         self.username = TextInput(hint_text="Enter username")   
+        self.graph_id = "1702928"
         
     def b_press(self, instance):
         self.create_instance()
