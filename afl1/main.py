@@ -20,6 +20,7 @@ def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
 
     return events_json
 
+
 def create_buttons_of_enabled_events(
     graph_id: str,
     sim_id: str,
@@ -42,14 +43,14 @@ def create_buttons_of_enabled_events(
     # add a custom button, that stores the event id
     for e in events_json['events']['event']:
         s = SimulationButton(
-        #the actual event id
-        e['@id'],
-        graph_id,
-        sim_id,
-        auth[0],
-        auth[1],
-        #the label of the event
-        e['@label']
+            #the actual event id
+            e['@id'],
+            graph_id,
+            sim_id,
+            auth[0],
+            auth[1],
+            #the label of the event
+            e['@label']
         )
         s.manipulate_box_layout = button_layout
     
@@ -91,7 +92,6 @@ class MainApp(App):
         self.username = TextInput(hint_text="Enter username")
         self.password = TextInput(hint_text="Enter password", password=True)
         self.graph_id = TextInput(hint_text="Enter graph id")  
-        
 
     
     def build(self):
@@ -111,6 +111,7 @@ class MainApp(App):
         b_leftupleft.add_widget(Label(text="Password"))
         b_leftupleft.add_widget(Label(text="Graph ID"))
         
+        self.b_right = BoxLayout(orientation='vertical')
         self.login_button.bind(on_press=self.start_sim)
         b_leftdown.add_widget(self.login_button)
         b_leftup.add_widget(b_leftupleft)
@@ -119,20 +120,40 @@ class MainApp(App):
         b_left.add_widget(b_leftdown)
         
         b_outer.add_widget(b_left)
-        b_outer.add_widget(b_right)
+        b_outer.add_widget(self.b_right)
         return b_outer
+    
+
+    # def start_sim(self, instance):
+    #     newsim_response = httpx.post(
+    #         url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/",
+    #         auth=(self.username.text, self.password.text))
+    
+    #     # self.simulation_id = newsim_response.headers['simulationID']
+    #     # print("New simulation created with id:", self.simulation_id)
+
+    #     # create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password))
 
     def start_sim(self, instance):
         newsim_response = httpx.post(
-        url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/",
-        auth=(self.username.text, self.password.text))
-    
-        self.simulation_id = newsim_response.headers['simulationID']
-        print("New simulation created with id:", self.simulation_id)
+            url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims/",
+            auth=(self.username.text, self.password.text))
 
-        create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password))
+        # Logging the response headers and body for debugging
+        print("Response Headers:", newsim_response.headers)
+        print("Response Body:", newsim_response.text)
 
+        if 'simulationID' in newsim_response.headers:
+            self.simulation_id = newsim_response.headers['simulationID']
+        else:
+            print("Error: 'simulationID' not found in response headers.")
+            # Check if simulationID is in the response body
+            # Implement logic to extract it from the body if necessary
+            return
 
+        create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
+        
+        
 if __name__ == '__main__':
     mainApp = MainApp()
     MainApp().run()
