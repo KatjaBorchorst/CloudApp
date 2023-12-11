@@ -119,17 +119,6 @@ class MainApp(App):
         b_outer.add_widget(self.b_right)
         return b_outer
     
-
-    # def start_sim(self, instance):
-    #     newsim_response = httpx.post(
-    #         url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/",
-    #         auth=(self.username.text, self.password.text))
-    
-    #     # self.simulation_id = newsim_response.headers['simulationID']
-    #     # print("New simulation created with id:", self.simulation_id)
-
-    #     # create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password))
-
     def start_sim(self, instance):
         newsim_response = httpx.post(
             url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims/",
@@ -145,8 +134,7 @@ class MainApp(App):
         else:
             print("Error: 'simulationID' not found in response headers.")
             return
-        create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
-        
+        create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)  
         
 if __name__ == '__main__':
     mainApp = MainApp()
