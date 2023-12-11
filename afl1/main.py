@@ -6,11 +6,11 @@ from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
+from kivy.graphics import Color, Rectangle
 
 def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
     next_activities_response = httpx.get(
-        "https://repository.dcrgraphs.net/api/graphs/" + graph_id +
-        "/sims/" + sim_id + "/events?filter=only-enabled",
+        f"https://repository.dcrgraphs.net/api/graphs/{graph_id}/sims/{sim_id}/events?filter=only-enabled",
         auth=auth)
     
     events_xml = next_activities_response.text
@@ -19,7 +19,6 @@ def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
     events_json = xmltodict.parse(events_xml_clean)
 
     return events_json
-
 
 def create_buttons_of_enabled_events(
     graph_id: str,
@@ -41,23 +40,21 @@ def create_buttons_of_enabled_events(
         events = events_json['events']['event']
 
     # add a custom button, that stores the event id
-    for e in events_json['events']['event']:
+    for e in events:
         s = SimulationButton(
-            #the actual event id
             e['@id'],
             graph_id,
             sim_id,
             auth[0],
             auth[1],
-            #the label of the event
             e['@label']
         )
         s.manipulate_box_layout = button_layout
     
         if e['@pending'] == 'true':
-            s.text_color = (1, 1, 0, 1)  # Yellow color: (R=1, G=1, B=0, A=1)
+            s.color = (1, 1, 0, 1) # Set text color to yellow 
     
-    button_layout.add_widget(s)
+        button_layout.add_widget(s)
 
 
 # source code provided in exercise sheet
@@ -71,6 +68,7 @@ class SimulationButton(Button):
         Button.__init__(self)
         self.event_id = event_id
         self.text = text
+        self.text_size: self.texture_size
         self.graph_id = graph_id
         self.simulation_id = simulation_id
         self.username = username
@@ -79,11 +77,10 @@ class SimulationButton(Button):
         self.bind(on_press=self.execute_event)
         
     def execute_event(self, instance):
-        url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/"
-            f"{self.simulation_id}/events/{self.event_id}")
-        newsim_response = httpx.post(url, auth=(self.username.text, self.password.text))
+        url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/{self.event_id}")
+        newsim_response = httpx.post(url, auth=(self.username, self.password))
+        #self.simulation_id = newsim_response.headers['simulationID']
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password), self.manipulate_box_layout)
-
 
 class MainApp(App):
     def __init__(self):
@@ -101,7 +98,6 @@ class MainApp(App):
         b_leftupright = BoxLayout(orientation='vertical')
         b_leftupleft = BoxLayout(orientation='vertical')
         b_leftdown = BoxLayout()
-        b_right = BoxLayout(orientation='vertical')
 
         b_leftupright.add_widget(self.username)
         b_leftupright.add_widget(self.password)
@@ -145,12 +141,10 @@ class MainApp(App):
 
         if 'simulationID' in newsim_response.headers:
             self.simulation_id = newsim_response.headers['simulationID']
+            print("New simulation created with id:", self.simulation_id)
         else:
             print("Error: 'simulationID' not found in response headers.")
-            # Check if simulationID is in the response body
-            # Implement logic to extract it from the body if necessary
             return
-
         create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)
         
         
