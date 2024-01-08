@@ -133,36 +133,36 @@ class MainApp(App):
         return b_outer
     
     def start_sim(self, instance):
-<<<<<<< HEAD
+        query = f"SELECT * FROM dcrgraphs WHERE (graph_id = {self.graph_id.text})"
+        cursor.execute(query)
+        rows = cursor.fetchall()
         # if there is not a simulation for the given graph in the database
-        if ((cursor.execute(f"SELECT * FROM dcrgraph WHERE graph_id = {self.graph_id}"))[0] == None):
+        if (rows[0] == None):
             newsim_response = httpx.post(
-            url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/",
+            url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims/",
             auth=(self.username.text, self.password.text))
-    
-            self.simulation_id = newsim_response.headers['simulationID']
-            print("New simulation created with id:", self.simulation_id)
+
+            # Logging the response headers and body for debugging
+            print("Response Headers:", newsim_response.headers)
+            print("Response Body:", newsim_response.text)
+
+            if 'simulationID' in newsim_response.headers:
+                self.simulation_id = newsim_response.headers['simulationID']
+                print("New simulation created with id:", self.simulation_id)
+            else:
+                print("Error: 'simulationID' not found in response headers.")
+                return
             
             # add the created instance into the database
-            cursor.execute(f"INSERT into dcrgraphs VALUES({self.graph_id}, {self.simulation_id}, 'process_{self.simulation_id}')")
+            query = f"INSERT into dcrgraphs VALUES({self.graph_id.text}, {(self.simulation_id)}, 'homecare')"
+            cursor.execute(query)
+            conn.commit()
 
         # if there exists a simulation for the given graph in the database
         else:
-            row = cursor.execute(f"SELECT * FROM dcrgraph WHERE graph_id = {self.graph_id}")[0]
-            self.simulation_id = row[1]
+            row = rows[0] # select the first
+            self.simulation_id = row[1] # select the simulation id column
 
-        create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password))
-
-        # Logging the response headers and body for debugging
-        print("Response Headers:", newsim_response.headers)
-        print("Response Body:", newsim_response.text)
-
-        if 'simulationID' in newsim_response.headers:
-            self.simulation_id = newsim_response.headers['simulationID']
-            print("New simulation created with id:", self.simulation_id)
-        else:
-            print("Error: 'simulationID' not found in response headers.")
-            return
         create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)  
         
 if __name__ == '__main__':
