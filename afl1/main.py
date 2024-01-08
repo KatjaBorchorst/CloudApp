@@ -1,11 +1,24 @@
+
 import httpx
 import xmltodict
+import mysql.connector
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
+
+# config for the database connection
+config = {
+  'host':'cloudgroup6.mysql.database.azure.com',
+  'user':'Cloudgroup6',
+  'password':'Kugruppe6',
+  'database':'cloud',
+}
+
+conn = mysql.connector.connect(**config)
+cursor = conn.cursor()
 
 def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
     next_activities_response = httpx.get(
@@ -123,12 +136,22 @@ class MainApp(App):
         return b_outer
 
     def start_sim(self, instance):
-        newsim_response = httpx.post(
-        url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/",
-        auth=(self.username.text, self.password.text))
+        # if there is not a simulation for the given graph in the database
+        if ((cursor.execute(f"SELECT * FROM dcrgraph WHERE graph_id = {self.graph_id}"))[0] == None):
+            newsim_response = httpx.post(
+            url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/",
+            auth=(self.username.text, self.password.text))
     
-        self.simulation_id = newsim_response.headers['simulationID']
-        print("New simulation created with id:", self.simulation_id)
+            self.simulation_id = newsim_response.headers['simulationID']
+            print("New simulation created with id:", self.simulation_id)
+            
+            # add the created instance into the database
+            cursor.execute(f"INSERT into dcrgraphs VALUES({self.graph_id}, {self.simulation_id}, 'process_{self.simulation_id}')")
+
+        # if there exists a simulation for the given graph in the database
+        else:
+            row = cursor.execute(f"SELECT * FROM dcrgraph WHERE graph_id = {self.graph_id}")[0]
+            self.simulation_id = row[1]
 
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password))
 
