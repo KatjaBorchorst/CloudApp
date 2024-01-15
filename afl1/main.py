@@ -21,6 +21,13 @@ config = {
 conn = mysql.connector.connect(**config)
 cursor = conn.cursor()
 
+def is_accepting(graph_id, sim_id, auth):
+    events = get_enabled_events(
+        graph_id,
+        sim_id,
+        auth) 
+    return bool(events['events']['@isAccepting'])
+
 def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
     next_activities_response = httpx.get(
         f"https://repository.dcrgraphs.net/api/graphs/{graph_id}/sims/{sim_id}/events?filter=only-enabled",
@@ -163,7 +170,9 @@ class MainApp(App):
             row = rows[0] # select the first
             self.simulation_id = row[1] # select the simulation id column
 
-        create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right)  
+        create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right) 
+        
+        print(is_accepting(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text)) )
         
 if __name__ == '__main__':
     mainApp = MainApp()
