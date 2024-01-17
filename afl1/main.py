@@ -164,15 +164,18 @@ class MainApp(App):
         self.login_button.color = (1, 1, 1, 1)
     
     def terminate(self, instance):
+        print("Before terminating, self.simulation_id:", self.simulation_id)
         if (is_accepting(self.graph_id.text, self.simulation_id, 
                         (self.username.text, self.password.text))):
             query = f"DELETE FROM dcrgraphs WHERE (simulation_id = '{self.simulation_id}')"
+            print("PRINT:", query)
             cursor.execute(query)
             conn.commit()
             self.stop()
         else:
             self.login_button.color = (1, 0, 0, 1) # Set text color to red (indicating bad) 
             Clock.schedule_once(self.reset_login_button_color, 0.5)
+        return
             
     
     def start_sim(self, instance):
@@ -183,6 +186,7 @@ class MainApp(App):
 
         # if there is not a simulation for the given graph in the database
         if (len(rows) == 0):
+            print("COULD NOT FINT ENTRY")
             newsim_response = httpx.post(
             url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims/",
             auth=(self.username.text, self.password.text))
@@ -205,10 +209,14 @@ class MainApp(App):
 
         # if there exists a simulation for the given graph in the database
         else:
+            print("COULD FIND ENTRY")
             row = rows[0] # select the first
             self.simulation_id = row[1] # select the simulation id column
         
+
+        print("After starting sim, self.simulation_id:", self.simulation_id)
         self.login_button.text="Terminate"
+        self.login_button.unbind(on_press=self.start_sim)
         self.login_button.bind(on_press=self.terminate)
         create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right) 
         
