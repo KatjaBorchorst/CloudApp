@@ -175,7 +175,6 @@ class MainApp(App):
         else:
             self.login_button.color = (1, 0, 0, 1) # Set text color to red (indicating bad) 
             Clock.schedule_once(self.reset_login_button_color, 0.5)
-        return
             
     
     def start_sim(self, instance):
