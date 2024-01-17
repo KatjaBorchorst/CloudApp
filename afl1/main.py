@@ -8,7 +8,8 @@ from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
-from kivy.graphics import Color, Rectangle
+from kivy.clock import Clock
+
 
 # config for the database connection
 config = {
@@ -21,12 +22,6 @@ config = {
 conn = mysql.connector.connect(**config)
 cursor = conn.cursor()
 
-def is_accepting(graph_id, sim_id, auth):
-    events = get_enabled_events(
-        graph_id,
-        sim_id,
-        auth) 
-    return bool(events['events']['@isAccepting'])
 
 def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
     next_activities_response = httpx.get(
@@ -46,10 +41,24 @@ def create_buttons_of_enabled_events(
     auth: (str, str),
     button_layout: BoxLayout):
 
+    # Look in the database and see if the user is assigned a role
+    query = f"SELECT Role FROM dcrusers WHERE email = '{auth[0]}'"
+    cursor.execute(query)
+    rows = cursor.fetchall()   
+
+    # If the user is not in the database, there is no role assigned
+    role = None
+
+    if (len(rows) == 0):
+        print("No role assigned to the user")
+    else:
+        role = rows[0][0]
+
     events_json = get_enabled_events(
         graph_id,
         sim_id,
         auth)
+
     
     button_layout.clear_widgets()
     events = []
@@ -58,6 +67,11 @@ def create_buttons_of_enabled_events(
         events = [events_json['events']['event']]
     else:
         events = events_json['events']['event']
+
+    # If there is a role assigned, filter the events to only contain the role's events
+    if role != None:
+        events = [e for e in events if e['@roles'] == role]
+        
 
     # add a custom button, that stores the event id
     for e in events:
@@ -76,6 +90,14 @@ def create_buttons_of_enabled_events(
     
         button_layout.add_widget(s)
 
+def is_accepting(graph_id, sim_id, auth):
+    events = get_enabled_events(
+        graph_id,
+        sim_id,
+        auth) 
+    
+    return ((events['events']['@isAccepting']) == 'True')
+    
 
 # source code provided in exercise sheet
 class SimulationButton(Button):
@@ -98,8 +120,7 @@ class SimulationButton(Button):
         
     def execute_event(self, instance):
         url = (f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/{self.simulation_id}/events/{self.event_id}")
-        newsim_response = httpx.post(url, auth=(self.username, self.password))
-        #self.simulation_id = newsim_response.headers['simulationID']
+        httpx.post(url, auth=(self.username, self.password))
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password), self.manipulate_box_layout)
 
 class MainApp(App):
@@ -139,12 +160,29 @@ class MainApp(App):
         b_outer.add_widget(self.b_right)
         return b_outer
     
+    def reset_login_button_color(self, instance):
+        self.login_button.color = (1, 1, 1, 1)
+    
+    def terminate(self, instance):
+        if (is_accepting(self.graph_id.text, self.simulation_id, 
+                        (self.username.text, self.password.text))):
+            query = f"DELETE FROM dcrgraphs WHERE (simulation_id = '{self.simulation_id}')"
+            cursor.execute(query)
+            conn.commit()
+            self.stop()
+        else:
+            self.login_button.color = (1, 0, 0, 1) # Set text color to red (indicating bad) 
+            Clock.schedule_once(self.reset_login_button_color, 0.5)
+            
+    
     def start_sim(self, instance):
-        query = f"SELECT * FROM dcrgraphs WHERE (graph_id = {self.graph_id.text})"
+        query = f"SELECT * FROM dcrgraphs WHERE (graph_id = '{self.graph_id.text}')"
+        print("PRINT:", query)
         cursor.execute(query)
         rows = cursor.fetchall()
+
         # if there is not a simulation for the given graph in the database
-        if (rows[0] == None):
+        if (len(rows) == 0):
             newsim_response = httpx.post(
             url=f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id.text}/sims/",
             auth=(self.username.text, self.password.text))
@@ -169,11 +207,12 @@ class MainApp(App):
         else:
             row = rows[0] # select the first
             self.simulation_id = row[1] # select the simulation id column
-
+        
+        self.login_button.text="Terminate"
+        self.login_button.bind(on_press=self.terminate)
         create_buttons_of_enabled_events(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text), self.b_right) 
         
-        print(is_accepting(self.graph_id.text, self.simulation_id, (self.username.text, self.password.text)) )
-        
+    
 if __name__ == '__main__':
     mainApp = MainApp()
     MainApp().run()
