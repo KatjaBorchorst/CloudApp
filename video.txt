@@ -1,0 +1,9 @@
+- Viser tom database og role som elderly person
+- Udfører der er dirty dishes og lukker (uden at terminate)
+- Viser der nu er en simulation og ændrer role
+- Læg mærke til dishes er pending fordi elderly person gjorde den der activity
+- Prøver at terminate med pending tasks
+- Lukker og genoptager samme session
+- Termiante uden pending tasks
+- Viser simulation er slettet igen
+- Prøver uden role og kan se alle included activities. Altså for både home care worker og elderly person. Her vil der igen laves en ny simulation med nyt id, men det vises ik i videoen
